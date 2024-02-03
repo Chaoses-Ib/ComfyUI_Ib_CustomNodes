@@ -1,0 +1,43 @@
+[project]
+name = "ComfyUI_Ib_CustomNodes"
+version = "0.1.0"
+description = 'Load Image From Path'
+readme = "README.md"
+# requires-python = ">=3.8"
+license = "MIT"
+keywords = ["comfyui"]
+dynamic = ["dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/Chaoses-Ib/ComfyUI_Ib_CustomNodes"
+comfyui-legacy = "https://github.com/Chaoses-Ib/comfyui-legacy"
+
+[build-system]
+requires = ["hatchling", "hatch-requirements-txt"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
+
+[tool.hatch.build.targets.sdist]
+packages = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+exclude = [
+  "*.md",
+  "/images",
+  "/docs",
+  "/examples",
+  "/workflow_examples",
+  "/tests",
+]
+
+[tool.hatch.build.targets.sdist.sources]
+"." = "ComfyUI_Ib_CustomNodes"
+
+[tool.hatch.build.targets.wheel.sources]
+"." = "ComfyUI_Ib_CustomNodes"
+
+[project.entry-points."comfyui_legacy.custom_nodes"]
+ComfyUI_Ib_CustomNodes = "ComfyUI_Ib_CustomNodes"
