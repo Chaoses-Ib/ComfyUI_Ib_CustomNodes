@@ -1,8 +1,8 @@
 import torch
 
-import os
 import hashlib
 from pathlib import Path
+from typing import Iterable
 
 from PIL import Image, ImageOps
 import numpy as np
@@ -54,3 +54,91 @@ class LoadImageFromPath:
             return "Invalid image path: {}".format(image_path)
 
         return True
+
+class PILToImage:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {'required': 
+                    {'images': ('PIL_IMAGE', )},
+                }
+
+    RETURN_TYPES = ('IMAGE',)
+    FUNCTION = 'pil_images_to_images'
+
+    CATEGORY = 'image'
+
+    def pil_images_to_images(images: Iterable[Image.Image]) -> torch.Tensor:
+        pil_images = images
+
+        images = []
+        for pil_image in pil_images:
+            i = pil_image
+            i = ImageOps.exif_transpose(i)
+            if i.mode == 'I':
+                i = i.point(lambda i: i * (1 / 255))
+            image = i.convert("RGB")
+            image = np.array(image).astype(np.float32) / 255.0
+            image = torch.from_numpy(image)[None,]
+            images.append(image)
+        
+        if len(images) > 1:
+            images = torch.cat(images, dim=0)
+        else:
+            images = images[0]
+
+        return (images,)
+
+class PILToMask:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {'required': 
+                    {'images': ('PIL_IMAGE', )},
+                }
+
+    RETURN_TYPES = ('IMAGE',)
+    FUNCTION = 'pil_images_to_masks'
+
+    CATEGORY = 'image'
+
+    def pil_images_to_masks(images: Iterable[Image.Image]) -> torch.Tensor:
+        pil_images = images
+
+        masks = []
+        for pil_image in pil_images:
+            i = pil_image
+            i = ImageOps.exif_transpose(i)
+            if i.mode == 'I':
+                i = i.point(lambda i: i * (1 / 255))
+            if 'A' in i.getbands():
+                mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+                mask = 1. - torch.from_numpy(mask)
+            else:
+                mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
+            masks.append(mask)
+        
+        if len(masks) > 1:
+            masks = torch.cat(masks, dim=0)
+        else:
+            masks = masks[0]
+
+        return (masks,)
+
+class ImageToPIL:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {'required': 
+                    {'images': ('IMAGE', )},
+                }
+
+    RETURN_TYPES = ('PIL_IMAGE',)
+    FUNCTION = 'images_to_pil_images'
+
+    CATEGORY = 'image'
+
+    def images_to_pil_images(self, images: torch.Tensor) -> list[Image.Image]:
+        pil_images = []
+        for image in images:
+            i = 255. * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+            pil_images.append(img)
+        return (pil_images,)
