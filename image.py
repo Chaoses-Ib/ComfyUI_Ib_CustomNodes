@@ -49,6 +49,10 @@ class LoadImageFromPath:
 
     @classmethod
     def VALIDATE_INPUTS(s, image):
+        # If image is an output of another node, it will be None during validation
+        if image is None:
+            return True
+
         image_path = LoadImageFromPath._resolve_path(image)
         if not image_path.exists():
             return "Invalid image path: {}".format(image_path)

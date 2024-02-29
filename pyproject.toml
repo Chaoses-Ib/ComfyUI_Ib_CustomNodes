@@ -1,6 +1,6 @@
 [project]
 name = "ComfyUI_Ib_CustomNodes"
-version = "0.2.1"
+version = "0.2.2"
 description = 'Load Image From Path, PIL.Image'
 readme = "README.md"
 # requires-python = ">=3.8"
