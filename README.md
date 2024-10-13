@@ -27,6 +27,12 @@ The image path can be in the following format:
 
   `ComfyUI_00001_-assets\ComfyUI_00001_.png [temp]`
 
+## Installation
+Install via the Custom Nodes Manager in [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager).
+
+## Usage Example
+![usage](./usage.jpg)
+
 ## PIL.Image
 ```python
 def PILToImage(
