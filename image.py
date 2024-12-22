@@ -71,7 +71,7 @@ class PILToImage:
 
     CATEGORY = 'image/PIL'
 
-    def pil_images_to_images(images: Iterable[Image.Image]) -> torch.Tensor:
+    def pil_images_to_images(self, images: Iterable[Image.Image]) -> torch.Tensor:
         pil_images = images
 
         images = []
@@ -104,7 +104,7 @@ class PILToMask:
 
     CATEGORY = 'image/PIL'
 
-    def pil_images_to_masks(images: Iterable[Image.Image]) -> torch.Tensor:
+    def pil_images_to_masks(self, images: Iterable[Image.Image]) -> torch.Tensor:
         pil_images = images
 
         masks = []
