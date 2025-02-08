@@ -49,3 +49,4 @@ def ImageToPIL(
     images: Image
 ) -> PilImage
 ```
+Mainly for use with [ComfyScript](https://github.com/Chaoses-Ib/ComfyScript)'s real mode.
