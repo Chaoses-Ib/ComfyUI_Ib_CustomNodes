@@ -4,7 +4,7 @@ version = "0.2.3"
 description = 'Load Image From Path, PIL.Image'
 readme = "README.md"
 # requires-python = ">=3.8"
-license = "MIT"
+license = { text = "MIT License" }
 keywords = ["comfyui"]
 dynamic = ["dependencies"]
 
