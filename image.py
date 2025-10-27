@@ -38,9 +38,12 @@ class LoadImageFromPath:
         if 'A' in i.getbands():
             mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
             mask = 1. - torch.from_numpy(mask)
+            
+            # Ensure mask has 3 dimensions:
+            mask = mask.unsqueeze(0)
         else:
             mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
-        
+            
         return (image_out, mask, image)
     
     def _resolve_path(self, image) -> Path:
@@ -171,6 +174,7 @@ async def browse_directory(request):
     """Browse directories and return file listings"""
     try:
         path = request.query.get('path', '')
+        sort_method = request.query.get('sort', 'name_asc')  # Default to name ascending
         
         if not path:
             # Return some common starting points
@@ -193,7 +197,8 @@ async def browse_directory(request):
         files = []
         
         try:
-            for item in sorted(os.listdir(path)):
+            items = []
+            for item in os.listdir(path):
                 # Skip hidden files/folders (starting with .)
                 if item.startswith('.'):
                     continue
@@ -201,15 +206,46 @@ async def browse_directory(request):
                 item_path = os.path.join(path, item)
                 try:
                     if os.path.isdir(item_path):
-                        directories.append(item)
+                        item_type = 'directory'
+                        stat = os.stat(item_path)
                     elif os.path.isfile(item_path):
                         # Check if it's an image file
                         ext = os.path.splitext(item)[1].lower()
                         if ext in ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp', '.tiff', '.tif']:
-                            files.append(item)
+                            item_type = 'file'
+                            stat = os.stat(item_path)
+                        else:
+                            continue
+                    else:
+                        continue
                 except (PermissionError, OSError):
                     # Skip items we can't access
                     continue
+                
+                items.append({
+                    'name': item,
+                    'type': item_type,
+                    'path': item_path,
+                    'modified': stat.st_mtime
+                })
+                
+            # Apply sorting
+            if sort_method == 'name_asc':
+                items.sort(key=lambda x: x['name'].lower())
+            elif sort_method == 'name_desc':
+                items.sort(key=lambda x: x['name'].lower(), reverse=True)
+            elif sort_method == 'date_desc':
+                items.sort(key=lambda x: x['modified'], reverse=True)
+            elif sort_method == 'date_asc':
+                items.sort(key=lambda x: x['modified'])
+            
+            # Separate back into directories and files
+            for item in items:
+                if item['type'] == 'directory':
+                    directories.append(item['name'])
+                else:
+                    files.append(item['name'])
+                    
         except PermissionError:
             return web.json_response({'error': 'Permission denied'}, status=403)
         
@@ -219,7 +255,8 @@ async def browse_directory(request):
             'directories': directories,
             'files': files,
             'current_path': path,
-            'parent_path': parent_path
+            'parent_path': parent_path,
+            'sort_method': sort_method
         })
         
     except Exception as e:

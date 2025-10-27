@@ -64,6 +64,12 @@ class FileBrowserDialog {
 		header.innerHTML = `
 			<h3 style="margin: 0; font-size: 14px; font-weight: 600;">Select Image</h3>
 			<div style="display: flex; gap: 8px; align-items: center;">
+				<select id="sortMethod" style="background: #444; border: 1px solid #666; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;">
+					<option value="name_asc">A → Z</option>
+					<option value="name_desc">Z → A</option>
+					<option value="date_desc">Newest</option>
+					<option value="date_asc">Oldest</option>
+				</select>
 				<button id="closeBrowser" style="background: #c00; border: none; color: white; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 12px; font-weight: bold;">✕</button>
 			</div>
 		`;
@@ -158,11 +164,17 @@ class FileBrowserDialog {
         };
         
         overlay.querySelector('#selectFile').onclick = selectAndClose;
+
+		// Add the sort change handler
+		const sortSelect = overlay.querySelector('#sortMethod');
+		sortSelect.onchange = () => {
+			this.loadDirectory(this.currentPath);
+		};
  
-        // Load initial directory
+		// Load initial directory
         await this.loadDirectory(this.currentPath);
     }
-    
+ 
     async loadDirectory(path) {
         this.currentPath = path;
         const content = document.getElementById('browserContent');
@@ -175,13 +187,19 @@ class FileBrowserDialog {
         document.getElementById('selectFile').disabled = true;
         
         try {
-            const response = await api.fetchApi(`/ib_custom_nodes/browse_directory?path=${encodeURIComponent(path)}`);
-            const data = await response.json();
+			const sortMethod = document.getElementById('sortMethod') ? document.getElementById('sortMethod').value : 'name_asc';
+			const response = await api.fetchApi(`/ib_custom_nodes/browse_directory?path=${encodeURIComponent(path)}&sort=${encodeURIComponent(sortMethod)}`);
+			const data = await response.json();
             
             if (data.error) {
                 content.innerHTML = `<div style="color: #f55; padding: 20px; text-align: center; font-size: 12px;">Error: ${data.error}</div>`;
                 return;
             }
+			
+		const sortSelect = document.getElementById('sortMethod');
+			if (sortSelect && data.sort_method) {
+				sortSelect.value = data.sort_method;
+			}
             
             // Update path display
 			pathDisplay.innerHTML = `
@@ -407,24 +425,45 @@ app.registerExtension({
                             pathWidget.value = filePath;
                             
                             // Load image using ComfyUI's proper system
-                            try {
-                                const filename = filePath.split(/[\\/]/).pop();
-                                const imgUrl = `/ib_custom_nodes/serve_image?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(filename)}`;
-                                const img = new Image();
-                                img.src = imgUrl;
-                                
-                                img.onload = () => {
-                                    // Set up the image array exactly like ComfyUI does
-                                    node.imgs = [img];
-                                    node.imageIndex = 0;
-                                    
-                                    // This triggers ComfyUI's built-in preview system
-                                    app.graph.setDirtyCanvas(true);
-                                };
-                                
-                            } catch (e) {
-                                console.error('Failed to load image:', e);
-                            }
+							try {
+								const filename = filePath.split(/[\\/]/).pop();
+								const imgUrl = `/ib_custom_nodes/serve_image?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(filename)}`;
+								const img = new Image();
+								
+								// Add cache busting to prevent cached issues
+								img.src = imgUrl + '&t=' + Date.now();
+								
+								img.onload = () => {
+									// Ensure node.imgs exists and is properly set
+									if (!node.imgs) {
+										node.imgs = [];
+									}
+									node.imgs = [img];
+									node.imageIndex = 0;
+									
+									// Force a more comprehensive refresh
+									app.graph.setDirtyCanvas(true, true);
+									
+									// Also trigger node refresh specifically
+									if (node.onDrawBackground) {
+										node.onDrawBackground();
+									}
+								};
+								
+								img.onerror = () => {
+									console.warn('Failed to load image preview:', filePath);
+									// Clear any broken images but keep the node functional
+									node.imgs = null;
+									node.imageIndex = 0;
+									app.graph.setDirtyCanvas(true, true);
+								};
+								
+							} catch (e) {
+								console.error('Failed to load image:', e);
+								node.imgs = null;
+								node.imageIndex = 0;
+								app.graph.setDirtyCanvas(true, true);
+							}
                         }
                     });
                 });
