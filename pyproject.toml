@@ -1,6 +1,11 @@
 [project]
 name = "ComfyUI_Ib_CustomNodes"
-version = "0.2.3"
+version = "0.3.0"
+authors = [
+  {name = "Chaoses-Ib"},
+  {name = "alFrame"},
+  {name = "gibiee"},
+]
 description = 'Load Image From Path, PIL.Image'
 readme = "README.md"
 # requires-python = ">=3.8"
