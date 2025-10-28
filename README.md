@@ -1,4 +1,7 @@
 # ComfyUI_Ib_CustomNodes
+## Installation
+Install via the Custom Nodes Manager in [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager).
+
 ## Load Image From Path
 ```python
 def LoadImageFromPath(
@@ -27,11 +30,21 @@ The image path can be in the following format:
 
   `ComfyUI_00001_-assets\ComfyUI_00001_.png [temp]`
 
-## Installation
-Install via the Custom Nodes Manager in [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager).
+### Usage Example
+![usage](images/LoadImageFromPath.jpg)
 
-## Usage Example
-![usage](./usage.jpg)
+## Load Image From Path (Enhanced)
+Enhanced with image preview, file browser and a `path` output, made by @alFrame:
+
+![](images/LoadImageFromPath-ImageAndPath.jpg)
+
+File browser:
+
+![](images/LoadImageFromPath-FileBrowser.jpg)
+
+Mask:
+
+![](images/LoadImageFromPath-Mask.jpg)
 
 ## PIL.Image
 ```python
