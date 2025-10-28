@@ -13,6 +13,10 @@ import folder_paths
 from aiohttp import web
 from server import PromptServer
 
+# ===================================================================================
+# ORIGINAL VERSION OF THE NODE
+# ===================================================================================
+
 class LoadImageFromPath:
     @classmethod
     def INPUT_TYPES(s):
@@ -22,62 +26,46 @@ class LoadImageFromPath:
 
     CATEGORY = "image"
 
-    RETURN_TYPES = ("IMAGE", "MASK", "STRING")
-    RETURN_NAMES = ("IMAGE", "MASK", "path")
+    RETURN_TYPES = ("IMAGE", "MASK")
     FUNCTION = "load_image"
-    
     def load_image(self, image):
-        # Use the static method correctly
-        image_path = self._resolve_path(image)
-        
+        image_path = LoadImageFromPath._resolve_path(image)
+
         i = Image.open(image_path)
         i = ImageOps.exif_transpose(i)
-        image_out = i.convert("RGB")
-        image_out = np.array(image_out).astype(np.float32) / 255.0
-        image_out = torch.from_numpy(image_out)[None,]
+        image = i.convert("RGB")
+        image = np.array(image).astype(np.float32) / 255.0
+        image = torch.from_numpy(image)[None,]
         if 'A' in i.getbands():
             mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
             mask = 1. - torch.from_numpy(mask)
-            
-            # Ensure mask has 3 dimensions:
-            mask = mask.unsqueeze(0)
         else:
             mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
-            
-        return (image_out, mask, image)
-    
-    def _resolve_path(self, image) -> Path:
+        return (image, mask)
+
+    def _resolve_path(image) -> Path:
         image_path = Path(folder_paths.get_annotated_filepath(image))
         return image_path
 
     @classmethod
     def IS_CHANGED(s, image):
-        # Need to handle this differently since it's a class method
-        try:
-            # Create a temporary instance to resolve the path
-            temp_instance = s()
-            image_path = temp_instance._resolve_path(image)
-            m = hashlib.sha256()
-            with open(image_path, 'rb') as f:
-                m.update(f.read())
-            return m.digest().hex()
-        except:
-            return image  # Fallback
+        image_path = LoadImageFromPath._resolve_path(image)
+        m = hashlib.sha256()
+        with open(image_path, 'rb') as f:
+            m.update(f.read())
+        return m.digest().hex()
 
     @classmethod
     def VALIDATE_INPUTS(s, image):
+        # If image is an output of another node, it will be None during validation
         if image is None:
             return True
 
-        try:
-            # Create a temporary instance to resolve the path
-            temp_instance = s()
-            image_path = temp_instance._resolve_path(image)
-            if not image_path.exists():
-                return "Invalid image path: {}".format(image_path)
-            return True
-        except:
-            return "Error validating image path"
+        image_path = LoadImageFromPath._resolve_path(image)
+        if not image_path.exists():
+            return "Invalid image path: {}".format(image_path)
+
+        return True
 
 class PILToImage:
     @classmethod
@@ -165,8 +153,78 @@ class ImageToPIL:
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
             pil_images.append(img)
-        return (pil_images,)
+        return (pil_images,)       
 
+# ===================================================================================
+# ENHANCED VERSION WITH FILE BROWSER
+# Features: Full file browser, sorting, preview, any path access, path output added
+# ===================================================================================
+
+class LoadImageFromPathEnhanced:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("STRING", {"default": r"ComfyUI_00001_-assets\ComfyUI_00001_.png [output]"})},
+                }
+
+    CATEGORY = "image"
+
+    RETURN_TYPES = ("IMAGE", "MASK", "STRING")
+    RETURN_NAMES = ("IMAGE", "MASK", "path")
+    FUNCTION = "load_image"
+    
+    def load_image(self, image):
+        # Use the static method correctly
+        image_path = self._resolve_path(image)
+        
+        i = Image.open(image_path)
+        i = ImageOps.exif_transpose(i)
+        image_out = i.convert("RGB")
+        image_out = np.array(image_out).astype(np.float32) / 255.0
+        image_out = torch.from_numpy(image_out)[None,]
+        if 'A' in i.getbands():
+            mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+            mask = 1. - torch.from_numpy(mask)
+            
+            # Ensure mask has 3 dimensions:
+            mask = mask.unsqueeze(0)
+        else:
+            mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
+            
+        return (image_out, mask, image)
+    
+    def _resolve_path(self, image) -> Path:
+        image_path = Path(folder_paths.get_annotated_filepath(image))
+        return image_path
+
+    @classmethod
+    def IS_CHANGED(s, image):
+        # Need to handle this differently since it's a class method
+        try:
+            # Create a temporary instance to resolve the path
+            temp_instance = s()
+            image_path = temp_instance._resolve_path(image)
+            m = hashlib.sha256()
+            with open(image_path, 'rb') as f:
+                m.update(f.read())
+            return m.digest().hex()
+        except:
+            return image  # Fallback
+
+    @classmethod
+    def VALIDATE_INPUTS(s, image):
+        if image is None:
+            return True
+
+        try:
+            # Create a temporary instance to resolve the path
+            temp_instance = s()
+            image_path = temp_instance._resolve_path(image)
+            if not image_path.exists():
+                return "Invalid image path: {}".format(image_path)
+            return True
+        except:
+            return "Error validating image path"
 
 # Server endpoints for file browsing
 @PromptServer.instance.routes.get("/ib_custom_nodes/browse_directory")

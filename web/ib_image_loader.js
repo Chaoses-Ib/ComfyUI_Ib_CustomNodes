@@ -409,7 +409,7 @@ app.registerExtension({
     name: "Ib.ImageLoader",
     
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "LoadImageFromPath") {
+        if (nodeData.name === "LoadImageFromPathEnhanced") {
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             
             nodeType.prototype.onNodeCreated = function() {
