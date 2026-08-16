@@ -119,8 +119,18 @@ class LoadImageFromPath:
         return (image[0], mask[0])
 
     def _resolve_path(image) -> Path:
-        image_path = Path(folder_paths.get_annotated_filepath(image))
-        return image_path
+        # Keep support for the old annotated forms
+        name, base_dir = folder_paths.annotated_filepath(image)
+        if base_dir is not None:
+            # Annotated path – still go through the secure helper
+            return Path(folder_paths.get_annotated_filepath(image))
+
+        # No annotation → treat as a real filesystem path
+        p = Path(image).expanduser()
+        if not p.is_absolute():
+            # Relative path without annotation → relative to input (old behaviour)
+            p = Path(folder_paths.get_input_directory()) / p
+        return p.resolve()
 
     @classmethod
     def IS_CHANGED(s, image):
@@ -132,14 +142,16 @@ class LoadImageFromPath:
 
     @classmethod
     def VALIDATE_INPUTS(s, image):
-        # If image is an output of another node, it will be None during validation
         if image is None:
             return True
-
-        image_path = LoadImageFromPath._resolve_path(image)
+        try:
+            image_path = LoadImageFromPath._resolve_path(image)
+        except ValueError as e:
+            return str(e)
         if not image_path.exists():
             return "Invalid image path: {}".format(image_path)
-
+        if not image_path.is_file():
+            return "Path is not a file: {}".format(image_path)
         return True
 
 class PILToImage:
